@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import pickle
+import tensorflow as tf
 np.random.seed(99)
 
 class MemoryBank:
@@ -25,15 +26,17 @@ class MemoryBank:
         else:
             print("Memory bank empty.")
 
-    def add_or_update(self, index, features):
-        assert len(features.shape) == 1, "The memory bank accepts only single dim vectors -- Shape:" + str(
-            features.shape)
-        if index not in self.memory_bank:
-            self.memory_bank[index] = features
-        else:
-            # update the representations with an exponential moving average
-            features_updated = self.weight * self.memory_bank[index] + (1 - self.weight) * features
-            self.memory_bank[index] = features_updated
+    def add_or_update(self, batch_indices, batch_features):
+
+        for i, repr in zip(batch_indices, batch_features):
+            assert len(repr.shape) == 1, "The memory bank accepts only single dim vectors -- Shape:" + str(
+                repr.shape)
+            if i not in self.memory_bank:
+                self.memory_bank[i] = repr
+            else:
+                # update the representations with an exponential moving average
+                features_updated = self.weight * self.memory_bank[i] + (1 - self.weight) * repr
+                self.memory_bank[i] = features_updated
 
     def __len__(self):
         return len(self.memory_bank)
@@ -41,12 +44,16 @@ class MemoryBank:
     def __getitem__(self, idx):
         return np.expand_dims(self.memory_bank[idx], axis=0)
 
-    def sample_negatives(self, index, size):
+    def sample_negatives(self, positive_indices, size):
         # returns a batch of representations from the memory bank
         # the [index] parameter value excludes the corresponding image
         # from the output batch
-        candidate_negative_samples = [index]
-        while index in candidate_negative_samples:
+        candidate_negative_samples = positive_indices.copy()
+        while positive_indices in candidate_negative_samples:
             candidate_negative_samples = np.random.choice(list(self.memory_bank.keys()), size)
 
         return np.array([self.memory_bank[i] for i in candidate_negative_samples])
+
+    def sample_by_indices(self, batch_indices):
+        # returns a batch of representations from the memory bank by ids
+        return np.array([self.memory_bank[i] for i in batch_indices])

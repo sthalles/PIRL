@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 # The data, split between train and test sets:
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-
+x_train = x_train[:100]
 print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
 print(x_test.shape[0], 'test samples')
@@ -25,7 +25,7 @@ indices = list(range(len(x_train)))
 INPUT_SHAPE = (32, 32, 3)
 BATCH_SIZE = 1
 EPOCHS = 1
-N_NEGATIVES = 31
+N_NEGATIVES = 16
 
 encoder = build_model(INPUT_SHAPE)
 f_model = f(input_shape=(128,))
@@ -40,14 +40,14 @@ dataset = dataset.batch(1)
 
 memory_bank = MemoryBank()
 
-# # fill up the memory bank
-# counter = 0
-# for index, I, It in dataset:
-#     v_i = encoder(I)
-#     f_vi = np.squeeze(f_model(v_i))
-#     memory_bank.add_or_update(index.numpy()[0], features=f_vi)
-#     counter += 1
-# print("Total iter:", counter)
+# fill up the memory bank
+counter = 0
+for curr_indices, I, It in dataset:
+    v_i = encoder(I)
+    f_vi = f_model(v_i)
+    memory_bank.add_or_update(curr_indices.numpy(), batch_features=f_vi)
+    counter += 1
+print("Total iter:", counter)
 
 assert len(memory_bank) == len(x_train.data)
 # memory_bank.save_memory_bank()
@@ -96,8 +96,8 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=3e-4)
 
 MAX_ITER = 1000
 counter = 0
-for index, I, It in dataset:
-    current_index = index.numpy()[0]
+for curr_indices, I, It in dataset:
+    current_indices = curr_indices.numpy()
 
     with tf.GradientTape() as enc_tape, tf.GradientTape() as f_tape, tf.GradientTape() as g_tape:
         v_i = encoder(I)
@@ -111,13 +111,13 @@ for index, I, It in dataset:
         g_vit = g_model(v_it)
 
         # update the representation in the memory bank
-        memory_bank.add_or_update(current_index, np.squeeze(f_vi))
+        memory_bank.add_or_update(current_indices, f_vi)
 
         # get the memory bank representation for the current image
-        mi = memory_bank[current_index]
+        mi = memory_bank.sample_by_indices(current_indices)
         # print("mi.shape:", mi.shape)
 
-        loss = total_loss(mi, f_vi, g_vit, current_index)
+        loss = total_loss(mi, f_vi, g_vit, current_indices)
 
     # compute grads w.r.t model parameters and update weights
     grads = enc_tape.gradient(loss, encoder.trainable_variables)
