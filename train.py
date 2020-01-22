@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 # The data, split between train and test sets:
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-x_train = x_train[:5000]
+x_train = x_train[:1000]
 print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
 print(x_test.shape[0], 'test samples')
@@ -24,7 +24,7 @@ indices = list(range(len(x_train)))
 INPUT_SHAPE = (32, 32, 3)
 BATCH_SIZE = 1
 EPOCHS = 1
-N_NEGATIVES = 64
+N_NEGATIVES = 128
 
 encoder = build_model(INPUT_SHAPE)
 # encoder.load_weights("./encoder.h5")
@@ -60,18 +60,18 @@ def h(v_i, v_it, negatives, T=0.07):
     return numerator / (numerator + tf.reduce_sum(negative_similarity))
 
 
-def nce_loss(f_vi, g_vit, positive_index, eps=1e-15):
+def nce_loss(f_vi, g_vit, negatives, eps=1e-15):
     assert f_vi.shape == g_vit.shape, "Shapes do not match" + str(f_vi.shape) + ' != ' + str(g_vit.shape)
-    negatives = memory_bank.sample_negatives(positive_index, batch_size=N_NEGATIVES)
-    # print("negatives.shape:", negatives.shape)
-
     #  predicted input values of 0 and 1 are undefined (hence the clip by value)
     return -tf.math.log(h(f_vi, g_vit, negatives)) - tf.reduce_sum(
         [tf.math.log(1 - h(g_vit, tf.expand_dims(mi_prime, axis=0), negatives)) for
          mi_prime in negatives])
 
 def total_loss(mi, f_vi, g_vit, positive_index, lambda_=0.5):
-    return lambda_ * nce_loss(mi, g_vit, positive_index) + (1 - lambda_) * nce_loss(mi, f_vi, positive_index)
+    negatives = memory_bank.sample_negatives(positive_index, batch_size=N_NEGATIVES)
+    # print("negatives.shape:", negatives.shape)
+
+    return lambda_ * nce_loss(mi, g_vit, negatives) + (1 - lambda_) * nce_loss(mi, f_vi, negatives)
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=3e-4)
 
