@@ -19,9 +19,13 @@ class CNN(tf.keras.Model):
         self.conv4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same')
         self.bn4 = tf.keras.layers.BatchNormalization()
 
-        self.global_pool = tf.keras.layers.GlobalAveragePooling2D()
+        self.global_pool = tf.keras.layers.GlobalAveragePooling2D(name='avg_pool')
 
-    def call(self, x, training):
+        self.f = tf.keras.layers.Dense(units=128, activation=None, name="head_f")
+        self.g = tf.keras.layers.Dense(units=128, activation=None, name="head_g")
+
+
+    def call(self, x, head='f', training=True):
         x = self.conv1(x)
         x = self.bn1(x, training=training)
         x = self.activation(x)
@@ -43,28 +47,13 @@ class CNN(tf.keras.Model):
         x = self.pool(x)
 
         x = self.global_pool(x)
-        return x
 
+        if head == 'f':
+            out = self.f(x)
+        elif head == 'g':
+            out = self.g(x)
 
-class f(tf.keras.Model):
-    def __init__(self):
-        super(f, self).__init__()
-        self.dense = tf.keras.layers.Dense(units=128, activation=None)
-
-    def call(self, x):
-        x = self.dense(x)
-        return x
-
-
-class g(tf.keras.Model):
-
-    def __init__(self):
-        super(g, self).__init__()
-        self.dense = tf.keras.layers.Dense(units=128, activation=None)
-
-    def call(self, x):
-        x = self.dense(x)
-        return x
+        return x, out
 
 
 def MobileNet(input_shape):

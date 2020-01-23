@@ -65,9 +65,9 @@ class MemoryBank:
 
         candidate_negative_samples = np.random.choice(list(range(self.memory_bank.shape[0])), p=p, size=batch_size)
 
-        while len(np.intersect1d(candidate_negative_samples, positive_indices)) > 0:
-            candidate_negative_samples = np.random.choice(list(range(self.memory_bank.shape[0])), p=p, size=batch_size)
-            print("retrying...")
+        # while len(np.intersect1d(candidate_negative_samples, positive_indices)) > 0:
+        #     candidate_negative_samples = np.random.choice(list(range(self.memory_bank.shape[0])), p=p, size=batch_size)
+        #     print("retrying...")
 
         # do not use np.array([list comprehention])!
         # the perfomance slows down exponentially
