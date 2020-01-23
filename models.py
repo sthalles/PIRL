@@ -24,7 +24,6 @@ class CNN(tf.keras.Model):
         self.f = tf.keras.layers.Dense(units=128, activation=None, name="head_f")
         self.g = tf.keras.layers.Dense(units=128, activation=None, name="head_g")
 
-
     def call(self, x, head='f', training=True):
         x = self.conv1(x)
         x = self.bn1(x, training=training)
@@ -57,7 +56,6 @@ class CNN(tf.keras.Model):
 
 
 def MobileNet(input_shape):
-
     # Create the base model from the pre-trained MobileNet V2
     base_model = tf.keras.applications.InceptionResNetV2(input_shape=input_shape,  # define the input shape
                                                          include_top=False,  # remove the classification layer
@@ -65,38 +63,3 @@ def MobileNet(input_shape):
                                                          weights=None)  # use ImageNet pre-trained weights
     base_model.trainable = True
     return base_model
-
-# def build_model(input_shape):
-#     model = tf.keras.Sequential()
-#     model.add(layers.Conv2D(filters=8, kernel_size=3, strides=1, padding='same', input_shape=input_shape))
-#     model.add(layers.BatchNormalization())
-#     model.add(layers.Activation('relu'))
-#     model.add(layers.MaxPooling2D(pool_size=2))
-#
-#     model.add(layers.Conv2D(filters=16, kernel_size=3, strides=1, padding='same'))
-#     model.add(layers.BatchNormalization())
-#     model.add(layers.Activation('relu'))
-#     model.add(layers.MaxPooling2D(pool_size=2))
-#
-#     model.add(layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same'))
-#     model.add(layers.BatchNormalization())
-#     model.add(layers.Activation('relu'))
-#     model.add(layers.MaxPooling2D(pool_size=2))
-#
-#     model.add(layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same'))
-#     model.add(layers.BatchNormalization())
-#     model.add(layers.Activation('relu'))
-#     model.add(layers.MaxPooling2D(pool_size=2))
-#
-#     model.add(layers.GlobalAveragePooling2D())
-#     return model
-
-# def f():
-#     model = Sequential()
-#     model.add(Dense(units=128))
-#     return model
-#
-# def g():
-#     model = Sequential()
-#     model.add(Dense(units=128))
-#     return model
