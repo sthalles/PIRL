@@ -2,8 +2,10 @@ import numpy as np
 import os
 import pickle
 import tensorflow as tf
+
 np.random.seed(99)
 import time
+
 
 class MemoryBank:
     def __init__(self, shape, weight=0.5):
@@ -18,7 +20,11 @@ class MemoryBank:
             return pickle.load(open(self.filename, "rb"))
         else:
             print("Memory bank empty.")
-            return np.zeros(self.shape, dtype=np.float32)
+            stdev = 1. / np.sqrt(self.shape[1] / 3)
+            memory = np.random.rand(self.shape[0], self.shape[1]).astype(np.float32)
+            memory *= 2 * stdev
+            memory -= stdev
+            return memory
 
     def save_memory_bank(self):
         if not os.path.isfile(self.filename):
@@ -51,9 +57,17 @@ class MemoryBank:
         # the [index] parameter value excludes the corresponding image
         # from the output batch
         # start = time.time()
-        candidate_negative_samples = positive_indices.copy()
-        while positive_indices in candidate_negative_samples:
-            candidate_negative_samples = np.random.choice(list(range(self.memory_bank.shape[0])), batch_size)
+
+        p = np.ones(self.memory_bank.shape[0])
+        p[positive_indices] = 0
+        p = p / np.sum(p)
+        # assert np.sum(p) == 1.0, "The probabilities must sum up to 1. Received: " + str(np.sum(p))
+
+        candidate_negative_samples = np.random.choice(list(range(self.memory_bank.shape[0])), p=p, size=batch_size)
+
+        while len(np.intersect1d(candidate_negative_samples, positive_indices)) > 0:
+            candidate_negative_samples = np.random.choice(list(range(self.memory_bank.shape[0])), p=p, size=batch_size)
+            print("retrying...")
 
         # do not use np.array([list comprehention])!
         # the perfomance slows down exponentially

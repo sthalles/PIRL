@@ -14,4 +14,4 @@ def transform(index, image):
     return index, image, image_transformed
 
 def normalize(index, I, It):
-    return index, tf.cast(I, tf.float32) / 255., tf.cast(It, tf.float32)  / 255.
+    return index, tf.cast(I, tf.float32) / 255., tf.cast(It, tf.float32) / 255.
