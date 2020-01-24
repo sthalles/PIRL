@@ -21,7 +21,7 @@ indices = list(range(len(x_train)))
 
 INPUT_SHAPE = (32, 32, 3)
 BATCH_SIZE = 32
-EPOCHS = 400
+EPOCHS = 200
 N_NEGATIVES = 1024
 
 encoder = CNN(INPUT_SHAPE)
@@ -111,7 +111,9 @@ writer = tf.summary.create_file_writer('./logs/' + str(time.time()) + "/")
 counter = 0
 
 with writer.as_default():
+
     for curr_indices, I, It in dataset:
+        start = time.time()
         with tf.GradientTape(persistent=True) as tape:
             v_i, f_vi = encoder(I, head=tf.constant('f'), training=True)
             v_it, g_vit = encoder(It, head=tf.constant('g'), training=True)
@@ -136,7 +138,8 @@ with writer.as_default():
         grads = tape.gradient(loss, encoder.trainable_variables)
         optimizer.apply_gradients(zip(grads, encoder.trainable_variables))
 
-        print("Loss:", loss)
+        end = time.time()
+        print("Loss:", loss.numpy(), "Time/batch:", (end-start) * 1000, "ms")
 
 # encoder.save('saved_model/my_model')
 encoder.save_weights('encoder.h5')
