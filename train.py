@@ -21,7 +21,7 @@ indices = list(range(len(x_train)))
 
 INPUT_SHAPE = (32, 32, 3)
 BATCH_SIZE = 32
-EPOCHS = 200
+EPOCHS = 180
 N_NEGATIVES = 1024
 
 encoder = CNN(INPUT_SHAPE)

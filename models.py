@@ -7,6 +7,7 @@ class CNN(tf.keras.Model):
         self.conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=1, padding='same',
                                             input_shape=input_shape)
         self.bn1 = tf.keras.layers.BatchNormalization()
+
         self.activation = tf.keras.layers.ReLU()
         self.pool = tf.keras.layers.MaxPooling2D(strides=2, pool_size=2)
 
@@ -49,7 +50,7 @@ class CNN(tf.keras.Model):
 
         x = self.global_pool(x)
 
-        out = tf.cond(head == 'f', lambda: self.f(x), lambda: self.g(x))
+        out = tf.cond(tf.equal(head, 'f'), lambda: self.f(x), lambda: self.g(x))
         # if head == 'f':
         #     out = self.f(x)
         # elif head == 'g':
