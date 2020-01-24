@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+from utils import timeit
 
 class CNN(tf.keras.Model):
     def __init__(self, input_shape):
@@ -24,7 +24,9 @@ class CNN(tf.keras.Model):
         self.f = tf.keras.layers.Dense(units=128, activation=None, name="head_f")
         self.g = tf.keras.layers.Dense(units=128, activation=None, name="head_g")
 
-    def call(self, x, head='f', training=True):
+    @timeit
+    #@tf.function
+    def call(self, x, head, training=True):
         x = self.conv1(x)
         x = self.bn1(x, training=training)
         x = self.activation(x)
@@ -47,10 +49,11 @@ class CNN(tf.keras.Model):
 
         x = self.global_pool(x)
 
-        if head == 'f':
-            out = self.f(x)
-        elif head == 'g':
-            out = self.g(x)
+        out = tf.cond(head == 'f', lambda: self.f(x), lambda: self.g(x))
+        # if head == 'f':
+        #     out = self.f(x)
+        # elif head == 'g':
+        #     out = self.g(x)
 
         return x, out
 
