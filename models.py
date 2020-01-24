@@ -24,7 +24,7 @@ class CNN(tf.keras.Model):
         self.f = tf.keras.layers.Dense(units=128, activation=None, name="head_f")
         self.g = tf.keras.layers.Dense(units=128, activation=None, name="head_g")
 
-    @timeit
+    # @timeit
     #@tf.function
     def call(self, x, head, training=True):
         x = self.conv1(x)

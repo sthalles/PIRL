@@ -1,17 +1,14 @@
 import tensorflow as tf
-from utils import transform, normalize
+from utils import transform, normalize, timeit
 from models import MobileNet, CNN
-from memory_bank import MemoryBank
-import os
+# from memory_bank import MemoryBank
+from memory_bank_tf import MemoryBankTf
 import time
 import pickle
 
 tf.random.set_seed(99)
 print(tf.test.is_gpu_available())
-
-import numpy as np
 from keras.datasets import cifar10
-import matplotlib.pyplot as plt
 
 # The data, split between train and test sets:
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
@@ -24,23 +21,21 @@ indices = list(range(len(x_train)))
 
 INPUT_SHAPE = (32, 32, 3)
 BATCH_SIZE = 32
-EPOCHS = 15
-N_NEGATIVES = 256
+EPOCHS = 400
+N_NEGATIVES = 1024
 
 encoder = CNN(INPUT_SHAPE)
 # _ = encoder(np.random.rand(1,32,32,3))
 # encoder.load_weights('encoder.h5')
 
 # create a dataset to initialize the Memory bank
-memory_bank = MemoryBank(shape=(x_train.shape[0], 128))
-
-assert len(memory_bank) == x_train.shape[0]
-print("Memory bank is filled!")
+memory_bank = MemoryBankTf(shape=(x_train.shape[0], 128), from_pickle=True)
 
 # recreate the dataset
 dataset = tf.data.Dataset.from_tensor_slices((indices, x_train))
-dataset = dataset.map(transform)
-dataset = dataset.map(normalize)
+dataset = dataset.map(transform, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+dataset = dataset.map(normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 dataset = dataset.repeat(EPOCHS)
 dataset = dataset.shuffle(4096)
 dataset = dataset.batch(BATCH_SIZE)
@@ -56,14 +51,15 @@ def h(v_i, v_it, negatives, T=0.07):
     numerator = tf.math.exp(similarity / T)
     # print("numerator.shape:", numerator.shape)
 
-    v_it = np.expand_dims(v_it, axis=1)
+    v_it = tf.expand_dims(v_it, axis=1)
 
-    similarity = cosine_similarity(v_it, negatives)
+    similarity = cosine_similarity(v_it, tf.expand_dims(tf.reshape(negatives, (-1, negatives.shape[-1])), axis=0))
     negative_similarity = tf.math.exp(similarity / T)
     negative_similarity = tf.reduce_sum(negative_similarity, axis=1)
     return numerator / (numerator + negative_similarity)
 
 
+# @timeit
 def nce_loss(f_vi, g_vit, negatives, eps=1e-15):
     assert f_vi.shape == g_vit.shape, "Shapes do not match" + str(f_vi.shape) + ' != ' + str(g_vit.shape)
     #  predicted input values of 0 and 1 are undefined (hence the clip by value)
@@ -74,11 +70,18 @@ def nce_loss(f_vi, g_vit, negatives, eps=1e-15):
     #     inter = h(g_vit, mi_prime, negatives)
     #     a.append(tf.math.log(1 - inter))
     #
+
+    # a = [tf.math.log(1 - h(g_vit, mi_prime, negatives)) for
+    #          mi_prime in tf.transpose(negatives, (1, 0, 2))]
     # a = tf.reduce_sum(a, axis=0)
 
-    return - tf.math.log(h(f_vi, g_vit, negatives)) - tf.reduce_sum(
-        [tf.math.log(1 - h(g_vit, mi_prime, negatives)) for
-         mi_prime in tf.transpose(negatives, (1, 0, 2))], axis=0)
+    # b = tf.map_fn(h, tf.transpose(negatives, (1, 0, 2)), parallel_iterations=f_vi.shape[0])
+
+    # return - tf.math.log(h(f_vi, g_vit, negatives)) - tf.reduce_sum(
+    #     [tf.math.log(1 - h(g_vit, mi_prime, negatives)) for
+    #      mi_prime in tf.transpose(negatives, (1, 0, 2))], axis=0)
+
+    return - tf.math.log(h(f_vi, g_vit, negatives)) - tf.math.log(1 - h(g_vit, negatives[:,0,:], negatives))
 
 
 def total_loss(mi, f_vi, g_vit, positive_index, lambda_=0.5):
@@ -109,11 +112,9 @@ counter = 0
 
 with writer.as_default():
     for curr_indices, I, It in dataset:
-        current_indices = curr_indices.numpy()
-
         with tf.GradientTape(persistent=True) as tape:
-            v_i, f_vi = encoder(I, head='f', training=True)
-            v_it, g_vit = encoder(It, head='g', training=True)
+            v_i, f_vi = encoder(I, head=tf.constant('f'), training=True)
+            v_it, g_vit = encoder(It, head=tf.constant('g'), training=True)
 
             tf.summary.histogram(name="v_i", data=v_i, step=optimizer.iterations)
             tf.summary.histogram(name="v_it", data=v_it, step=optimizer.iterations)
@@ -121,15 +122,15 @@ with writer.as_default():
             tf.summary.histogram(name="g_vit", data=g_vit, step=optimizer.iterations)
 
             # get the memory bank representation for the current image
-            mi = memory_bank.sample_by_indices(current_indices)
+            mi = memory_bank.sample_by_indices(curr_indices)
             tf.summary.histogram(name="mi", data=mi, step=optimizer.iterations)
             # assert mi.shape == (1,128), "Shape does not match --> " + str(mi.shape) + "Index:" + str(current_indices)
 
-            loss = tf.reduce_mean(total_loss(mi, f_vi, g_vit, current_indices))
+            loss = tf.reduce_mean(total_loss(mi, f_vi, g_vit, curr_indices))
             tf.summary.scalar('loss', loss, step=optimizer.iterations)
 
         # update the representation in the memory bank
-        memory_bank.update_memory_repr(current_indices, f_vi)
+        memory_bank.update_memory_repr(curr_indices, f_vi)
 
         # compute grads w.r.t model parameters and update weights
         grads = tape.gradient(loss, encoder.trainable_variables)
@@ -137,7 +138,6 @@ with writer.as_default():
 
         print("Loss:", loss)
 
-
 # encoder.save('saved_model/my_model')
 encoder.save_weights('encoder.h5')
-memory_bank.save_memory_bank()
+# memory_bank.save_memory_bank()
