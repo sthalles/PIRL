@@ -4,20 +4,20 @@ from utils import timeit
 class CNN(tf.keras.Model):
     def __init__(self, input_shape):
         super(CNN, self).__init__()
-        self.conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=1, padding='same',
+        self.conv1 = tf.keras.layers.Conv2D(filters=16, kernel_size=3, strides=1, padding='same',
                                             input_shape=input_shape)
         self.bn1 = tf.keras.layers.BatchNormalization()
 
         self.activation = tf.keras.layers.ReLU()
         self.pool = tf.keras.layers.MaxPooling2D(strides=2, pool_size=2)
 
-        self.conv2 = tf.keras.layers.Conv2D(filters=16, kernel_size=3, strides=1, padding='same')
+        self.conv2 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same')
         self.bn2 = tf.keras.layers.BatchNormalization()
 
-        self.conv3 = tf.keras.layers.Conv2D(filters=32, kernel_size=3, strides=1, padding='same')
+        self.conv3 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same')
         self.bn3 = tf.keras.layers.BatchNormalization()
 
-        self.conv4 = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1, padding='same')
+        self.conv4 = tf.keras.layers.Conv2D(filters=128, kernel_size=3, strides=1, padding='same')
         self.bn4 = tf.keras.layers.BatchNormalization()
 
         self.global_pool = tf.keras.layers.GlobalAveragePooling2D(name='avg_pool')
@@ -26,7 +26,7 @@ class CNN(tf.keras.Model):
         self.g = tf.keras.layers.Dense(units=128, activation=None, name="head_g")
 
     # @timeit
-    #@tf.function
+    @tf.function
     def call(self, x, head, training=True):
         x = self.conv1(x)
         x = self.bn1(x, training=training)

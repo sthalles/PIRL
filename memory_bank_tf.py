@@ -32,16 +32,20 @@ class MemoryBankTf:
         for idx, repr in zip(batch_indices, batch_features):
             self.memory_bank[idx].assign(repr)
 
+    # def update_memory_repr(self, batch_indices, batch_features):
+    #     # get the corresponding embeddings
+    #     embeddigs = tf.nn.embedding_lookup(self.memory_bank, batch_indices)
+    #
+    #     # perform batch update to the representations
+    #     embeddigs = self.weight * embeddigs + (1 - self.weight) * batch_features
+    #
+    #     for idx, repr in zip(batch_indices, embeddigs):
+    #         self.memory_bank[idx].assign(repr)
+
     def update_memory_repr(self, batch_indices, batch_features):
-        # get the corresponding embeddings
-        embeddigs = tf.nn.embedding_lookup(self.memory_bank, batch_indices)
-
         # perform batch update to the representations
-        features_updated_ = self.weight * embeddigs + (1 - self.weight) * batch_features
-
-        # update
-        for idx, repr in zip(batch_indices, features_updated_):
-            self.memory_bank[idx].assign(repr)
+        for idx, repr in zip(batch_indices, batch_features):
+            self.memory_bank[idx].assign(self.weight * self.memory_bank[idx] + (1 - self.weight) * repr)
 
     def sample_negatives(self, positive_indices, batch_size):
         positive_indices = tf.expand_dims(positive_indices, axis=1)

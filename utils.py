@@ -7,6 +7,7 @@ def unpickle(file):
         dict = pickle.load(fo, encoding='bytes')
     return dict
 
+@tf.function
 def transform(index, image):
     random_angle = tf.random.uniform(shape=(), minval=0, maxval=4, dtype=tf.int32)
     # label 0 --> 0 degree
@@ -20,6 +21,7 @@ def transform(index, image):
 
     return index, image, image_transformed
 
+@tf.function
 def normalize(index, I, It):
     return index, tf.cast(I, tf.float32) / 255., tf.cast(It, tf.float32) / 255.
 
