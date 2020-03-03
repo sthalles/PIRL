@@ -8,7 +8,6 @@ from models.baseline import CNN
 from utils import download_and_extract, read_all_images
 
 tf.random.set_seed(99)
-
 download_and_extract()
 
 DATA_PATH = './data/stl10_binary/train_X.bin'
