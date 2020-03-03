@@ -19,7 +19,6 @@ print("Using GPU:", tf.test.is_gpu_available())
 
 x_train = x_train[:100]
 print('x_train shape:', x_train.shape)
-print(x_train.shape[0], 'train samples')
 
 indices = list(range(len(x_train)))
 
