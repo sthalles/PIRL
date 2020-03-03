@@ -2,7 +2,7 @@ import tensorflow as tf
 from utils import timeit
 
 class CNN(tf.keras.Model):
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, output_dim):
         super(CNN, self).__init__()
         self.conv1 = tf.keras.layers.Conv2D(filters=16, kernel_size=3, strides=1, padding='same',
                                             input_shape=input_shape)
@@ -22,11 +22,11 @@ class CNN(tf.keras.Model):
 
         self.global_pool = tf.keras.layers.GlobalAveragePooling2D(name='avg_pool')
 
-        self.f = tf.keras.layers.Dense(units=128, activation=None, name="head_f")
-        self.g = tf.keras.layers.Dense(units=128, activation=None, name="head_g")
+        self.f = tf.keras.layers.Dense(units=output_dim, activation=None, name="head_f")
+        self.g = tf.keras.layers.Dense(units=output_dim, activation=None, name="head_g")
 
     # @timeit
-    @tf.function
+    # @tf.function
     def call(self, x, head, training=True):
         x = self.conv1(x)
         x = self.bn1(x, training=training)
@@ -59,11 +59,12 @@ class CNN(tf.keras.Model):
         return x, out
 
 
-def MobileNet(input_shape):
+def ResNet(input_shape):
     # Create the base model from the pre-trained MobileNet V2
-    base_model = tf.keras.applications.InceptionResNetV2(input_shape=input_shape,  # define the input shape
+    base_model = tf.keras.applications.ResNet50(input_shape=input_shape,  # define the input shape
                                                          include_top=False,  # remove the classification layer
                                                          pooling='avg',
                                                          weights=None)  # use ImageNet pre-trained weights
     base_model.trainable = True
+
     return base_model

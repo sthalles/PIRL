@@ -1,10 +1,6 @@
 import tensorflow as tf
 import pickle
-from utils import timeit
 import os
-
-tf.random.set_seed(99)
-
 
 class MemoryBankTf:
     def __init__(self, shape, weight=0.5, from_pickle=False):
@@ -27,20 +23,9 @@ class MemoryBankTf:
         else:
             print("Memory bank empty.")
 
-    @timeit
     def init_memory_bank(self, batch_indices, batch_features):
         for idx, repr in zip(batch_indices, batch_features):
             self.memory_bank[idx].assign(repr)
-
-    # def update_memory_repr(self, batch_indices, batch_features):
-    #     # get the corresponding embeddings
-    #     embeddigs = tf.nn.embedding_lookup(self.memory_bank, batch_indices)
-    #
-    #     # perform batch update to the representations
-    #     embeddigs = self.weight * embeddigs + (1 - self.weight) * batch_features
-    #
-    #     for idx, repr in zip(batch_indices, embeddigs):
-    #         self.memory_bank[idx].assign(repr)
 
     def update_memory_repr(self, batch_indices, batch_features):
         # perform batch update to the representations
@@ -65,16 +50,3 @@ class MemoryBankTf:
 
     def sample_by_indices(self, batch_indices):
         return tf.nn.embedding_lookup(self.memory_bank, batch_indices)
-
-# memory_bank = MemoryBankTf(shape=[10, 3])
-# assert memory_bank.memory_bank.shape == [10, 3], "Failed! Received:" + str(len(memory_bank))
-#
-# negatives = memory_bank.sample_negatives(positive_indices=[1, 2, 3, 4, 5, 6, 7, 8, 9])
-#
-# negatives = memory_bank.sample_by_indices(batch_indices=[8])
-#
-# memory_bank.update_memory_repr(tf.convert_to_tensor([4, 1]),
-#                                tf.convert_to_tensor([[0, 0, 0], [0, 0, 0]], dtype=tf.float32))
-#
-# negatives = memory_bank.sample_by_indices(batch_indices=[4])
-# print(negatives)

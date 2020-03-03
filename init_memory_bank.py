@@ -1,17 +1,14 @@
 import tensorflow as tf
-from utils import transform, normalize
-from models import CNN
-from memory_bank_tf import MemoryBankTf
-import os
-import pickle
+from data_aug.transforms import rotate_transform, normalize
+from memory_bank.memory_bank import MemoryBankTf
+from models.baseline import CNN
 
 tf.random.set_seed(99)
 
 print(tf.test.is_gpu_available())
 from keras.datasets import cifar10
 
-
-# The data, split between train and test sets:
+# The data_aug, split between train and test sets:
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
@@ -31,10 +28,10 @@ encoder = CNN(INPUT_SHAPE)
 memory_bank = MemoryBankTf(shape=(x_train.shape[0], 128), from_pickle=False)
 
 dataset = tf.data.Dataset.from_tensor_slices((indices, x_train))
-dataset = dataset.map(transform)
+dataset = dataset.map(rotate_transform())
 dataset = dataset.map(normalize)
 dataset = dataset.repeat(EPOCHS)
-dataset = dataset.batch(512)
+dataset = dataset.batch(256)
 
 # fill up the memory bank
 counter = 0
