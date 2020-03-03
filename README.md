@@ -1,2 +1,5 @@
-# pirl
-TensorFlow implementation of Self-Supervised Learning of Pretext-Invariant Representations
+# Self-Supervised Learning of Pretext-Invariant Representations - PIRL
+
+-----------
+
+
