@@ -5,26 +5,28 @@ from data_aug.transforms import normalize, rotate_transform
 from loss.nce_loss import nce_loss
 from memory_bank.memory_bank import MemoryBankTf
 from models.baseline import CNN
+from models.resnet import ResNetBase
 from utils import download_and_extract, read_all_images
 
 tf.random.set_seed(99)
 download_and_extract()
 
-DATA_PATH = './data/stl10_binary/train_X.bin'
+DATA_PATH = './data/stl10_binary/unlabeled_X.bin'
 x_train = read_all_images(DATA_PATH)
+input_shape = x_train.shape[1:]
 
 print(tf.__version__)
 print("Using GPU:", tf.test.is_gpu_available())
 
-x_train = x_train[:100]
+# x_train = x_train[:100]
 print('x_train shape:', x_train.shape)
 
 indices = list(range(len(x_train)))
 
 config = yaml.load(open("stl10_config.yaml", "r"), Loader=yaml.FullLoader)
 
-encoder = CNN(config['input_shape'], config['out_dim'])
-# _ = encoder(np.random.rand(1,32,32,3))
+encoder = CNN(input_shape, config['out_dim'])
+encoder = ResNetBase(input_shape, config['out_dim'])
 # encoder.load_weights('encoder.h5')
 
 # create a dataset to initialize the Memory bank
@@ -36,7 +38,7 @@ dataset = dataset.map(rotate_transform, num_parallel_calls=tf.data.experimental.
 dataset = dataset.map(normalize, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 dataset = dataset.repeat(config['epochs'])
-dataset = dataset.shuffle(256)
+dataset = dataset.shuffle(4096)
 dataset = dataset.batch(config['batch_size'], drop_remainder=True)
 
 
@@ -57,37 +59,41 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=3e-4)
 
 writer = tf.summary.create_file_writer('./logs/' + str(time.time()) + "/")
 
-counter = 0
+
+@tf.function
+def train_step(batch_I, batch_It):
+    with tf.GradientTape() as tape:
+        v_i, f_vi = encoder(batch_I, head=tf.constant('f'), training=True)
+        v_it, g_vit = encoder(batch_It, head=tf.constant('g'), training=True)
+
+        tf.summary.histogram(name="v_i", data=v_i, step=optimizer.iterations)
+        tf.summary.histogram(name="v_it", data=v_it, step=optimizer.iterations)
+        tf.summary.histogram(name="f_vi", data=f_vi, step=optimizer.iterations)
+        tf.summary.histogram(name="g_vit", data=g_vit, step=optimizer.iterations)
+
+        # get the memory bank representation for the current image
+        mi = memory_bank.sample_by_indices(curr_indices)
+        tf.summary.histogram(name="mi", data=mi, step=optimizer.iterations)
+        assert mi.shape == (config['batch_size'], config['out_dim']), "Shape does not match --> " + str(mi.shape)
+
+        loss = tf.reduce_mean(total_loss(mi, f_vi, g_vit, curr_indices, lambda_=config['lambda']))
+        tf.summary.scalar('loss', loss, step=optimizer.iterations)
+
+    # update the representation in the memory bank
+    memory_bank.update_memory_repr(curr_indices, f_vi)
+
+    # compute grads w.r.t model parameters and update weights
+    grads = tape.gradient(loss, encoder.trainable_variables)
+    optimizer.apply_gradients(zip(grads, encoder.trainable_variables))
+
 
 with writer.as_default():
     for curr_indices, I, It in dataset:
-        # start = time.time()
-        with tf.GradientTape() as tape:
-            v_i, f_vi = encoder(I, head=tf.constant('f'), training=True)
-            v_it, g_vit = encoder(It, head=tf.constant('g'), training=True)
+        start = time.time()
+        train_step(I, It)
 
-            tf.summary.histogram(name="v_i", data=v_i, step=optimizer.iterations)
-            tf.summary.histogram(name="v_it", data=v_it, step=optimizer.iterations)
-            tf.summary.histogram(name="f_vi", data=f_vi, step=optimizer.iterations)
-            tf.summary.histogram(name="g_vit", data=g_vit, step=optimizer.iterations)
-
-            # get the memory bank representation for the current image
-            mi = memory_bank.sample_by_indices(curr_indices)
-            tf.summary.histogram(name="mi", data=mi, step=optimizer.iterations)
-            assert mi.shape == (config['batch_size'], config['out_dim']), "Shape does not match --> " + str(mi.shape)
-
-            loss = tf.reduce_mean(total_loss(mi, f_vi, g_vit, curr_indices, lambda_=config['lambda']))
-            tf.summary.scalar('loss', loss, step=optimizer.iterations)
-
-        # update the representation in the memory bank
-        memory_bank.update_memory_repr(curr_indices, f_vi)
-
-        # compute grads w.r.t model parameters and update weights
-        grads = tape.gradient(loss, encoder.trainable_variables)
-        optimizer.apply_gradients(zip(grads, encoder.trainable_variables))
-
-        # end = time.time()
-        # print("Loss:", loss.numpy(), "Time/batch:", (end-start) * 1000, "ms")
+        end = time.time()
+        print("Time/batch:", (end-start) * 1000, "ms")
 
 encoder.save_weights('./checkpoints/encoder.h5')
 # memory_bank.save_memory_bank()

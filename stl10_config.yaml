@@ -1,6 +1,5 @@
-input_shape: (96, 96, 3)
-batch_size: 3
+batch_size: 32
 epochs: 40
-n_negatives: 2
-out_dim: 5
+n_negatives: 128
+out_dim: 128
 lambda: 0.5

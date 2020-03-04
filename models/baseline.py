@@ -59,12 +59,3 @@ class CNN(tf.keras.Model):
         return x, out
 
 
-def ResNet(input_shape):
-    # Create the base model from the pre-trained MobileNet V2
-    base_model = tf.keras.applications.ResNet50(input_shape=input_shape,  # define the input shape
-                                                         include_top=False,  # remove the classification layer
-                                                         pooling='avg',
-                                                         weights=None)  # use ImageNet pre-trained weights
-    base_model.trainable = True
-
-    return base_model
