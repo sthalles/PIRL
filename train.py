@@ -11,7 +11,7 @@ from utils import download_and_extract, read_all_images
 tf.random.set_seed(99)
 download_and_extract()
 
-DATA_PATH = './data/stl10_binary/unlabeled_X.bin'
+DATA_PATH = './data/stl10_binary/train_X.bin'
 x_train = read_all_images(DATA_PATH)
 input_shape = x_train.shape[1:]
 

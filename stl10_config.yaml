@@ -1,5 +1,5 @@
-batch_size: 32
-epochs: 40
-n_negatives: 128
+batch_size: 3
+epochs: 1
+n_negatives: 5
 out_dim: 128
 lambda: 0.5

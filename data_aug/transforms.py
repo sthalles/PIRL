@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 
-# @tf.function
 def rotate_transform(index, image):
     random_angle = tf.random.uniform(shape=(), minval=0, maxval=4, dtype=tf.int32)
     # label 0 --> 0 degree
@@ -16,6 +15,5 @@ def rotate_transform(index, image):
     return index, image, image_transformed
 
 
-# @tf.function
 def normalize(index, I, It):
     return index, tf.cast(I, tf.float32) / 255., tf.cast(It, tf.float32) / 255.
